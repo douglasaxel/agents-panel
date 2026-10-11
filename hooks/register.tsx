@@ -660,7 +660,23 @@ When you delegate implementation work (the "implementer subagents" of /implement
 - Pass the ticket title as the Agent \`description\`: the agents panel shows it.
 - With 2 or more delegated tasks, keep \`mcp__tiers__progress\` current: after planning (title, total, tasks [{title, tier, after}], phase "delegate"), on each accepted task (done), and once at the end (finished: true).`
 
+// Appended to /implement-spec's prompt, so its implementer subagents run as tiers.
+const IMPLEMENT_SPEC_NOTE = `
+
+## Implementer subagents (tiers plugin)
+
+Run every implementer subagent as a \`tiers:*\` agent, picked per ticket with the routing table in your system prompt, and pass the ticket title as the Agent \`description\`. Before the first implementer starts, call \`mcp__tiers__progress\` with \`title\` (the spec's name), \`total\`, \`tasks\` (one per ticket in dependency order: title, tier, after = the numbers of its blocking tickets) and \`phase: "delegate"\`. Update \`done\` each time a ticket merges into the integration branch, use \`phase: "review"\` during code-review, and send \`finished: true\` at the end.`
+
+const isImplementSpec = (skill: string): boolean => /(^|:)implement-spec$/.test(skill)
+
 export const register: Register = (on, options) => {
+  on('skill.prompt', async ($, e, next) => {
+    const prompt = await next(e)
+    if (!isImplementSpec(e.skill)) return prompt
+    if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open({ id: PANE, title: tr().pane })
+    return { text: prompt.text + IMPLEMENT_SPEC_NOTE }
+  })
+
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
     if (!e.tools.includes('Agent')) return composed

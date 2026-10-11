@@ -42,3 +42,23 @@ test('progress tool tracks planned and accepted tasks', async ($, on) => {
   const r = await $.tool.call({ tool: 'mcp__tiers__progress', done: 1 })
   expect(r.result).toBe('ok: Tasks 1/2')
 })
+
+test('implement-spec opens the agents panel and asks for tiers', async ($, on) => {
+  const opened: string[] = []
+  on('skill.prompt', (_, e) => ({ text: e.text }))
+  on('ui.panes', () => ({ value: [] }))
+  on('ui.open', (_, e) => {
+    opened.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  const { text } = await $.skill.prompt({ skill: 'mattpocock-skills:implement-spec', text: 'SPEC' })
+  expect(text.startsWith('SPEC')).toBe(true)
+  expect(text).toContain('tiers:*')
+  expect(opened).toEqual(['tiers-agents'])
+})
+
+test('other skills pass through untouched', async ($, on) => {
+  on('skill.prompt', (_, e) => ({ text: e.text }))
+  const { text } = await $.skill.prompt({ skill: 'mattpocock-skills:implement', text: 'X' })
+  expect(text).toBe('X')
+})
