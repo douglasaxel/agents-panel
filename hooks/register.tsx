@@ -656,7 +656,9 @@ When you delegate implementation work (the "implementer subagents" of /implement
 - Insight and thoroughness together are two tasks: tiers:heavy investigates and writes the brief, tiers:careful implements it.
 - Never pass \`model\` or \`effort\` to the Agent tool for these agents: the tier sets both.
 - A report of \`needs higher tier\`: hand the task to the next tier up, with that report.
+- Parallel tiers:* agents share one working tree unless the flow gives each its own worktree (as /implement-spec does). Run tasks that touch the same files one after another, or pass \`isolation: "worktree"\` and merge the results yourself.
 - Read-only search: use Explore, not a tier.
+- Other agents stay available. Use them for work that is not implementation (research, review, docs, planning), or when no tier fits the task; there you may pass \`model\` and \`effort\` as usual.
 - Pass the ticket title as the Agent \`description\`: the agents panel shows it.
 - With 2 or more delegated tasks, keep \`mcp__tiers__progress\` current: after planning (title, total, tasks [{title, tier, after}], phase "delegate"), on each accepted task (done), and once at the end (finished: true).`
 
