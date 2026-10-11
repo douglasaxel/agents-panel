@@ -1,6 +1,6 @@
 ---
 name: medium
-description: Implementer for standard feature work (Sonnet, high effort). Use for a well-specified ticket or vertical slice, bug fixes with a known cause, changes confined to a few files with clear acceptance criteria.
+description: "Implementer for standard feature work (Sonnet, high effort). Use for a well-specified ticket or vertical slice, bug fixes with a known cause, changes confined to a few files with clear acceptance criteria."
 model: sonnet
 effort: high
 color: blue

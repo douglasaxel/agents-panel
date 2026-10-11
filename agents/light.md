@@ -1,6 +1,6 @@
 ---
 name: light
-description: Implementer for mechanical work (Haiku, low effort). Use for renames, boilerplate, config, small isolated fixes with an obvious cause, and running builds/tests to report results. Not for anything that needs design judgment.
+description: "Implementer for mechanical work (Haiku, low effort). Use for renames, boilerplate, config, small isolated fixes with an obvious cause, and running builds/tests to report results. Not for anything that needs design judgment."
 model: haiku
 effort: low
 color: green

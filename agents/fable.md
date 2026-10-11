@@ -1,6 +1,6 @@
 ---
 name: fable
-description: Reserve implementer for the hardest problems (Fable, high effort). Use only for very complex logic (subtle algorithms, concurrency, many interacting states), bugs that survived a tiers:heavy attempt, or a bounded design feature the user explicitly asked to delegate.
+description: "Reserve implementer for the hardest problems (Fable, high effort). Use only for very complex logic (subtle algorithms, concurrency, many interacting states), bugs that survived a tiers:heavy attempt, or a bounded design feature the user explicitly asked to delegate."
 model: fable
 effort: high
 color: purple

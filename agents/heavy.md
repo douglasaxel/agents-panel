@@ -1,6 +1,6 @@
 ---
 name: heavy
-description: Implementer and investigator for unfamiliar or messy code (Opus, xhigh effort). Use when the root cause is unclear, the architecture is non-obvious, or a wrong first approach is expensive. Can investigate only and return a precise implementation brief.
+description: "Implementer and investigator for unfamiliar or messy code (Opus, xhigh effort). Use when the root cause is unclear, the architecture is non-obvious, or a wrong first approach is expensive. Can investigate only and return a precise implementation brief."
 model: opus
 effort: xhigh
 color: orange

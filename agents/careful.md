@@ -1,6 +1,6 @@
 ---
 name: careful
-description: Implementer for delicate but well-understood work (Opus, high effort). Use when the approach is clear but execution is risky: multi-file refactors, expand-contract migrations, fixes that must preserve invariants, logic with many edge cases.
+description: "Implementer for delicate but well-understood work (Opus, high effort). Use when the approach is clear but execution is risky: multi-file refactors, expand-contract migrations, fixes that must preserve invariants, logic with many edge cases."
 model: opus
 effort: high
 color: yellow
