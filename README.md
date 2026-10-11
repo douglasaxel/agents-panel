@@ -15,7 +15,7 @@ Tiered implementer subagents for [Claude Code](https://claude.com/claude-code), 
 - **Model-invoked.** Claude picks a tier on its own whenever it delegates implementation. The plugin adds a short routing table to the system prompt, so `/implement-spec`'s implementer subagents land on the right tier.
 - **Matt-flow aware.** Each agent reads the ticket it is pointed at, plus `GLOSSARY.md` and ADRs, builds test-first with `/tdd` (`/diagnosing-bugs` for bugs on heavy and fable), leaves `/code-review` to the caller, and follows the brief's git instructions.
 - **Escalates instead of guessing.** A worker out of its depth answers `needs higher tier`.
-- **Agents panel** (`/tiers`): every subagent of the session, with model, effort, self-reported steps, context, estimated cost and time. It opens on its own when `/implement-spec` runs or a tier agent starts.
+- **Agents panel** (`/tiers`): every subagent of the session, with model, effort, self-reported steps, context, estimated cost and time. It opens on its own whenever any subagent starts, and when `/implement-spec` runs.
 - **`/implement-spec` hook.** When that skill loads, the plugin appends a short note to its prompt: run implementers as `tiers:*` and report the tickets to the progress bar.
 - **Progress bar** above the prompt, driven by the `mcp__tiers__progress` tool.
 

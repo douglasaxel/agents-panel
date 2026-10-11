@@ -29,6 +29,7 @@ test('no routing section without the Agent tool', async ($, on) => {
 })
 
 test('progress tool tracks planned and accepted tasks', async ($, on) => {
+  on('ui.panes', () => ({ value: [] }))
   on('ui.open', () => ({ value: { isPlaced: false, reason: 'test' } }))
   await $.tool.call({
     tool: 'mcp__tiers__progress',
@@ -61,4 +62,26 @@ test('other skills pass through untouched', async ($, on) => {
   on('skill.prompt', (_, e) => ({ text: e.text }))
   const { text } = await $.skill.prompt({ skill: 'mattpocock-skills:implement', text: 'X' })
   expect(text).toBe('X')
+})
+
+test('any subagent opens the agents panel', async ($, on) => {
+  const opened: string[] = []
+  on('agent.spawn', () => ({ model: 'claude-sonnet-5-5', agentId: 'a1' }))
+  on('clock.now', () => ({ value: 1000 }))
+  on('ui.panes', () => ({ value: [] }))
+  on('ui.open', (_, e) => {
+    opened.push(e.id)
+    return { value: { isPlaced: true } }
+  })
+  await $.agent.spawn({
+    tool_use_id: 't1',
+    prompt: 'look around',
+    description: 'Explore repo',
+    subagentType: 'general-purpose',
+    provider: { plugin: 'engine', tier: 'builtin' },
+    parentModel: 'claude-opus-5-5',
+    background: false,
+    fork: false,
+  })
+  expect(opened).toEqual(['tiers-agents'])
 })

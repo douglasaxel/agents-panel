@@ -43,7 +43,6 @@ export type AgentRun = {
 export type Panel = {
   isCompact: boolean
   isDoneCollapsed: boolean
-  autoOpenedFor: string
 }
 
 declare module 'claude-code' {

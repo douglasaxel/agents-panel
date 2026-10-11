@@ -10,7 +10,6 @@ const agents = atom({ plugin: 'tiers', key: 'agents' } as const, [])
 const panel = atom({ plugin: 'tiers', key: 'panel' } as const, {
   isCompact: false,
   isDoneCollapsed: false,
-  autoOpenedFor: '',
 })
 const now = atom({ plugin: 'tiers', key: 'now' } as const, 0)
 
@@ -632,11 +631,9 @@ async function togglePane($: EngineInterface): Promise<boolean> {
   return true
 }
 
-async function autoOpen($: EngineInterface, key: string): Promise<void> {
-  const p = await read($, panel)
-  if (p.autoOpenedFor === key) return
-  await update($, panel, prev => ({ ...prev, autoOpenedFor: key }))
-  void $.ui.open({ id: PANE, title: tr().pane })
+// Opens the agents pane unless it is already up.
+async function openPane($: EngineInterface): Promise<void> {
+  if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open({ id: PANE, title: tr().pane })
 }
 
 // How the model picks a tier. Shared text, so it sits ahead of the cache boundary.
@@ -675,7 +672,7 @@ export const register: Register = (on, options) => {
   on('skill.prompt', async ($, e, next) => {
     const prompt = await next(e)
     if (!isImplementSpec(e.skill)) return prompt
-    if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open({ id: PANE, title: tr().pane })
+    await openPane($)
     return { text: prompt.text + IMPLEMENT_SPEC_NOTE }
   })
 
@@ -768,7 +765,7 @@ export const register: Register = (on, options) => {
       await update($, agents, list => list.filter(a => a.status === 'running'))
     }
     const next = await update($, flow, p => merge(p, input))
-    if (next && input.tasks?.length) await autoOpen($, next.title)
+    if (next && input.tasks?.length) await openPane($)
     return { result: `ok: ${label(next ?? blank())}` }
   })
 
@@ -829,10 +826,7 @@ export const register: Register = (on, options) => {
       return [...list.filter(a => a.id !== run.id), run].slice(-200)
     })
     await update($, now, () => at)
-    if (isTier(e.subagentType)) {
-      const f = await read($, flow)
-      await autoOpen($, f && !f.isFinished ? f.title : 'tiers')
-    }
+    await openPane($)
     return started
   })
 
