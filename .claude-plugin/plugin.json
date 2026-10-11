@@ -1,0 +1,20 @@
+{
+  "name": "tiers",
+  "version": "0.1.0",
+  "description": "Tiered implementer subagents (Haiku → Fable) that drive Matt Pocock's /tdd flow, plus a live agents panel and a progress bar above the prompt.",
+  "author": { "name": "douglasaxel", "url": "https://github.com/douglasaxel" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Panel language",
+      "description": "auto follows Claude Code's language setting, then the system locale",
+      "default": "auto",
+      "options": ["auto", "en", "pt"]
+    }
+  },
+  "homepage": "https://github.com/douglasaxel/claude-tiers",
+  "repository": "https://github.com/douglasaxel/claude-tiers",
+  "license": "MIT",
+  "keywords": ["subagents", "agents", "tdd", "mattpocock", "progress", "mod"]
+}
