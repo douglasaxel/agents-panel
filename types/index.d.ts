@@ -43,6 +43,8 @@ export type AgentRun = {
 export type Panel = {
   isCompact: boolean
   isDoneCollapsed: boolean
+  /** The agentId whose conversation the transcript pane shows. */
+  transcriptFor?: string
 }
 
 declare module 'claude-code' {

@@ -1,7 +1,7 @@
 // Agents panel and progress bar adapted from savvy-progress by johnnyvizz
 // (https://github.com/johnnyvizz/claude-kit, MIT). See LICENSE.
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, SessionMessage } from 'claude-code'
 
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
@@ -16,6 +16,7 @@ const now = atom({ plugin: 'tiers', key: 'now' } as const, 0)
 const TOOL = 'mcp__tiers__progress'
 const STEP_TOOL = 'mcp__tiers__step'
 const PANE = 'tiers-agents'
+const TRANSCRIPT = 'tiers-transcript'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
 const DONE = '#5fbf8f'
@@ -63,6 +64,10 @@ const STRINGS = {
     tasks: 'Tasks',
     review: 'Review',
     busy: 'running',
+    transcript: 'Transcript',
+    pickAgent: 'Pick a subagent in the Agents panel.',
+    noMessages: 'No messages yet.',
+    brief: 'Brief',
   },
   pt: {
     pane: 'Agentes',
@@ -91,6 +96,10 @@ const STRINGS = {
     tasks: 'Tarefas',
     review: 'Revisão',
     busy: 'rodando',
+    transcript: 'Transcrição',
+    pickAgent: 'Escolha um subagente no painel de agentes.',
+    noMessages: 'Nenhuma mensagem ainda.',
+    brief: 'Brief',
   },
 } as const
 
@@ -636,6 +645,45 @@ async function openPane($: EngineInterface): Promise<void> {
   if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open({ id: PANE, title: tr().pane })
 }
 
+// Points the transcript pane at one subagent and opens (or retitles) it.
+async function openTranscript($: EngineInterface, a: AgentRun): Promise<void> {
+  await update($, panel, prev => ({ ...prev, transcriptFor: a.agentId }))
+  await $.ui.open({ id: TRANSCRIPT, title: `${tr().transcript} · ${a.description || a.type}` })
+  // Best effort: a pane the surface has not placed yet cannot scroll.
+  await $.ui.scroll({ in: TRANSCRIPT, to: 'end' }).catch(() => undefined)
+}
+
+// ---------------------------------------------------------------------------
+// Transcript pane: one subagent's conversation, newest last.
+
+type Line = { kind: 'brief' | 'text' | 'tool' | 'result' | 'error'; text: string }
+
+const MAX_LINES = 80
+
+const oneLine = (s: string, max: number): string => clip(s.replace(/\s+/g, ' ').trim(), max)
+
+// The input field that says the most about a tool call, on one line.
+const toolArg = (input: Record<string, unknown>): string => {
+  for (const k of ['description', 'command', 'file_path', 'path', 'pattern', 'skill', 'query', 'url', 'prompt']) {
+    const v = input[k]
+    if (typeof v === 'string' && v.trim()) return oneLine(v, 100)
+  }
+  return ''
+}
+
+const linesOf = (messages: readonly SessionMessage[]): Line[] =>
+  messages.flatMap((m, i): Line[] => {
+    // The first user message is the brief; later ones only carry tool results, shown with their call.
+    if (m.role === 'user') return i === 0 && m.text ? [{ kind: 'brief', text: clip(m.text.trim(), 600) }] : []
+    const out: Line[] = m.text.trim() ? [{ kind: 'text', text: clip(m.text.trim(), 1500) }] : []
+    for (const u of m.toolUses) {
+      const arg = toolArg(u.input)
+      out.push({ kind: 'tool', text: `${u.tool}${arg ? `(${arg})` : ''}` })
+      if (u.text !== undefined) out.push({ kind: u.isError ? 'error' : 'result', text: oneLine(u.text, 160) || '—' })
+    }
+    return out
+  })
+
 // How the model picks a tier. Shared text, so it sits ahead of the cache boundary.
 const ROUTING = `# Tiered implementer subagents
 
@@ -932,6 +980,11 @@ export const register: Register = (on, options) => {
         onPress={() => update($, panel, prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed }))}
       />
     )
+    // A run the engine gave no agentId has no conversation to read.
+    const transcriptButton = (a: AgentRun) =>
+      a.agentId ? (
+        <Button key={`tr-${a.id}`} label={`${s.transcript} ›`} plain dimColor onPress={() => openTranscript($, a)} />
+      ) : null
     const isEmpty = list.length === 0 && planned.length === 0
     const summary = `≈${fmtCost(t.cost)}, ${fmtTokens(t.tokens)} ${s.tokensWord}, ${fmtTime(t.time)}`
 
@@ -958,14 +1011,16 @@ export const register: Register = (on, options) => {
           {toggleCompact}
           {isEmpty && <Text dimColor>{s.empty}</Text>}
           {running.length > 0 && section('h-run', `${s.running} · ${running.length}`)}
-          {running.map(a => (
-            <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={66} />
-          ))}
+          {running.flatMap(a => [
+            <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isRunning}`} width={W} height={66} />,
+            transcriptButton(a),
+          ])}
           {finished.length > 0 && toggleDone}
           {!p.isDoneCollapsed &&
-            finished.map(a => (
-              <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={66} />
-            ))}
+            finished.flatMap(a => [
+              <Svg key={a.id} source={agentSvg(W, a, at)} alt={`${a.description}: ${modelName(a.model)}, ${s.isFinished}`} width={W} height={66} />,
+              transcriptButton(a),
+            ])}
           {planned.length > 0 && section('h-plan', `${s.planned} · ${planned.length}`)}
           {planned.map(pl => (
             <Svg key={`plan-${pl.n}`} source={plannedSvg(W, pl)} alt={`${pl.n}. ${pl.title}: ${s.isPlanned}`} width={W} height={46} />
@@ -1006,6 +1061,7 @@ export const register: Register = (on, options) => {
               {steps}ctx {ctx}% · {fmtTokens(a.contextTokens)} ≈{fmtCost(a.costUsd)} {fmtTime(elapsed(a, at))}
             </Text>
           </Text>
+          {transcriptButton(a)}
         </Box>
       )
     }
@@ -1059,6 +1115,55 @@ export const register: Register = (on, options) => {
             })}
           </Box>
         )}
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: TRANSCRIPT }, async ($, e) => {
+    const s = tr()
+    const { Box, Text } = $.ui.resolve(e)
+    const { transcriptFor } = await read($, panel)
+    // Reading the clock redraws this each second while any agent runs.
+    await read($, now)
+    if (!transcriptFor) return <Text dimColor>{s.pickAgent}</Text>
+
+    const found = await $.session.messages({ agentId: transcriptFor })
+    if ('deny' in found) return <Text dimColor>{found.deny}</Text>
+    const lines = linesOf(found)
+    if (lines.length === 0) return <Text dimColor>{s.noMessages}</Text>
+
+    const hidden = Math.max(0, lines.length - MAX_LINES)
+    return (
+      <Box flexDirection="column">
+        {hidden > 0 && <Text dimColor>… {hidden}</Text>}
+        {lines.slice(hidden).map((l, i) => {
+          const key = `l${hidden + i}`
+          if (l.kind === 'brief')
+            return (
+              <Box key={key} flexDirection="column" marginBottom={1}>
+                <Text bold>{s.brief}</Text>
+                <Text dimColor>{l.text}</Text>
+              </Box>
+            )
+          if (l.kind === 'text')
+            return (
+              <Box key={key} marginTop={1}>
+                <Text>{l.text}</Text>
+              </Box>
+            )
+          if (l.kind === 'tool')
+            return (
+              <Text key={key} color={ACCENT} wrap="truncate-end">
+                ⏺ {l.text}
+              </Text>
+            )
+          return (
+            <Text key={key} color={l.kind === 'error' ? 'red' : undefined} dimColor={l.kind === 'result'} wrap="truncate-end">
+              {'  ⎿ '}
+              {l.text}
+            </Text>
+          )
+        })}
       </Box>
     )
   })

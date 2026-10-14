@@ -19,6 +19,7 @@ Tiered implementer subagents for [Claude Code](https://claude.com/claude-code), 
 - **Safe in parallel.** The routing table tells Claude to run tasks that touch the same files one after another, or with `isolation: "worktree"`, unless the flow already gives each implementer its own worktree (as `/implement-spec` does).
 - **Escalates instead of guessing.** A worker out of its depth answers `needs higher tier`, and Claude hands the task one tier up.
 - **Agents panel** (`/tiers` toggles it): every subagent of the session, with model, effort, self-reported steps, context, estimated cost and time. It opens on its own whenever any subagent starts, of any type, and when `/implement-spec` runs; closed, it opens again with the next subagent.
+- **Live transcript.** Press `Transcript ›` under any subagent in the panel to open a second pane with its conversation: the brief, what it says, each tool call with its result. It follows the agent while it runs (the last 80 lines; older ones are counted above).
 - **`/implement-spec` hook.** When that skill loads, the plugin appends a short note to its prompt: run implementers as `tiers:*` and report the tickets to the progress bar.
 - **Progress bar** above the prompt, driven by the `mcp__tiers__progress` tool: Claude reports the planned tasks, then each accepted one.
 

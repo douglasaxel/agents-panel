@@ -1,6 +1,6 @@
 {
   "name": "tiers",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Tiered implementer subagents (Haiku → Fable) that drive Matt Pocock's /tdd flow, plus a live agents panel and a progress bar above the prompt.",
   "author": { "name": "douglasaxel", "url": "https://github.com/douglasaxel" },
   "types": "./types/index.d.ts",
