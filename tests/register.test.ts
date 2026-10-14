@@ -4,15 +4,15 @@ test('progress tool tracks planned and accepted tasks', async ($, on) => {
   on('ui.panes', () => ({ value: [] }))
   on('ui.open', () => ({ value: { isPlaced: false, reason: 'test' } }))
   await $.tool.call({
-    tool: 'mcp__tiers__progress',
+    tool: 'mcp__agents-panel__progress',
     title: 'Checkout',
     phase: 'delegate',
     tasks: [
       { title: 'Schema', tier: 'medium' },
-      { title: 'API', tier: 'tiers:careful', after: [1] },
+      { title: 'API', tier: 'careful', after: [1] },
     ],
   })
-  const r = await $.tool.call({ tool: 'mcp__tiers__progress', done: 1 })
+  const r = await $.tool.call({ tool: 'mcp__agents-panel__progress', done: 1 })
   expect(r.result).toBe('ok: Tasks 1/2')
 })
 
@@ -35,7 +35,7 @@ test('any subagent opens the agents panel', async ($, on) => {
     background: false,
     fork: false,
   })
-  expect(opened).toEqual(['tiers-agents'])
+  expect(opened).toEqual(['agents-panel'])
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -63,19 +63,19 @@ for (const surface of ['terminal', 'desktop'] as const) {
       tool_use_id: 't1',
       prompt: 'Add the filter',
       description: 'Global filters',
-      subagentType: 'tiers:medium',
+      subagentType: 'general-purpose',
       provider: { plugin: 'engine', tier: 'builtin' },
       parentModel: 'claude-opus-5-5',
       background: false,
       fork: false,
     })
 
-    const agentsPane = await $.ui.mount({ plugin: 'tiers', surface, component: 'Pane', requestId: 'tiers-agents', props: {} as never })
+    const agentsPane = await $.ui.mount({ plugin: 'agents-panel', surface, component: 'Pane', requestId: 'agents-panel', props: {} as never })
     await agentsPane.press({ key: 'tr-a1' })
-    expect(opened.at(-1)?.id).toBe('tiers-transcript')
+    expect(opened.at(-1)?.id).toBe('agents-panel-transcript')
     expect(opened.at(-1)?.title).toContain('Global filters')
 
-    const transcript = await $.ui.mount({ plugin: 'tiers', surface, component: 'Pane', requestId: 'tiers-transcript', props: {} as never })
+    const transcript = await $.ui.mount({ plugin: 'agents-panel', surface, component: 'Pane', requestId: 'agents-panel-transcript', props: {} as never })
     expect(await transcript.find({ text: 'Reading the module first.' })).toBeDefined()
     expect(await transcript.find({ text: /Read\(src\/filter\.ts\)/ })).toBeDefined()
   })

@@ -49,7 +49,7 @@ export type Panel = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'tiers': {
+    'agents-panel': {
       flow: Flow | null
       agents: AgentRun[]
       panel: Panel

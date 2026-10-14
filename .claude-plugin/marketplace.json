@@ -7,7 +7,7 @@
   "description": "A live agents panel for Claude Code.",
   "plugins": [
     {
-      "name": "tiers",
+      "name": "agents-panel",
       "source": "./",
       "description": "A live agents panel with transcripts and a progress bar."
     }

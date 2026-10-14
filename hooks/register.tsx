@@ -5,17 +5,17 @@ import type { EngineInterface, Register, SessionMessage } from 'claude-code'
 
 import type { AgentRun, Flow, Panel, Phase, PlannedTask } from '../types'
 
-const flow = atom({ plugin: 'tiers', key: 'flow' } as const, null)
-const agents = atom({ plugin: 'tiers', key: 'agents' } as const, [])
-const panel = atom({ plugin: 'tiers', key: 'panel' } as const, {
+const flow = atom({ plugin: 'agents-panel', key: 'flow' } as const, null)
+const agents = atom({ plugin: 'agents-panel', key: 'agents' } as const, [])
+const panel = atom({ plugin: 'agents-panel', key: 'panel' } as const, {
   isCompact: false,
   isDoneCollapsed: false,
 })
-const now = atom({ plugin: 'tiers', key: 'now' } as const, 0)
+const now = atom({ plugin: 'agents-panel', key: 'now' } as const, 0)
 
-const TOOL = 'mcp__tiers__progress'
-const PANE = 'tiers-agents'
-const TRANSCRIPT = 'tiers-transcript'
+const TOOL = 'mcp__agents-panel__progress'
+const PANE = 'agents-panel'
+const TRANSCRIPT = 'agents-panel-transcript'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
 const ACCENT = '#8f8cf4'
 const DONE = '#5fbf8f'
@@ -121,7 +121,7 @@ async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
 }
 
 const blank = (): Flow => ({
-  title: 'tiers',
+  title: 'agents',
   total: 0,
   done: 0,
   running: 0,
@@ -138,7 +138,7 @@ const cleanTasks = (tasks: ProgressInput['tasks']): PlannedTask[] | undefined =>
     ?.filter(t => t.title?.trim())
     .map(t => ({
       title: (t.title ?? '').trim(),
-      tier: (t.tier ?? '').replace(/^(tiers:|tier-)/, '').trim().toLowerCase(),
+      tier: (t.tier ?? '').trim().toLowerCase(),
       after: (t.after ?? []).filter(n => Number.isInteger(n) && n > 0),
     }))
 
@@ -294,14 +294,6 @@ const TIER_COLOR: Record<string, string> = {
 
 const colorOf = (tier: string): string => TIER_COLOR[tier] ?? '#888780'
 
-// What each tier runs on, for planned tasks that have no run yet. Keep in step with agents/*.md.
-const TIER_MODEL: Record<string, string> = {
-  fable: 'Fable · high',
-  heavy: 'Opus · xhigh',
-  careful: 'Opus · high',
-  medium: 'Sonnet · high',
-  light: 'Haiku · low',
-}
 
 // USD per million tokens: input, output, cache read, cache write (5-minute TTL).
 // The engine reports tokens, not money, so the panel's cost is an estimate.
@@ -336,9 +328,8 @@ const costOf = (model: string, u: Usage): number => {
 
 const windowOf = (model: string): number => (/haiku/i.test(model) ? 200_000 : 1_000_000)
 
-// This plugin's agents are `tiers:careful` and so on.
-const isTier = (type: string): boolean => type.startsWith('tiers:') && type.slice(6) in TIER_MODEL
-const tierOf = (type: string): string => (isTier(type) ? type.slice(6) : 'other')
+// A run is drawn by its type (Explore has its own costume); tiers only label planned tasks.
+const tierOf = (_type: string): string => 'other'
 
 const modelName = (id: string): string => {
   const m = /(fable|mythos|opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?/i.exec(id)
@@ -583,7 +574,7 @@ const plannedSvg = (W: number, p: Planned): string => {
   const tier = p.tier in TIER_COLOR ? p.tier : 'other'
   const color = colorOf(tier)
   const textW = W - 42 - 22
-  const meta = [TIER_MODEL[tier] ?? '']
+  const meta: string[] = []
   if (p.after.length) meta.push(`${tr().after} ${p.after.join(', ')}`)
   return svg(
     W,
@@ -719,7 +710,7 @@ export const register: Register = (on, options) => {
       },
     })
     await $.command.register({
-      name: 'tiers',
+      name: 'agents-panel',
       description: 'Show or hide the panel of subagents: running, finished and planned, with model, context, cost and time',
     })
 
@@ -735,7 +726,7 @@ export const register: Register = (on, options) => {
     return started
   })
 
-  on('command.run', { command: 'tiers' }, async $ => {
+  on('command.run', { command: 'agents-panel' }, async $ => {
     const isOpen = await togglePane($)
     return { text: isOpen ? tr().opened : tr().closed }
   })
@@ -1010,7 +1001,7 @@ export const register: Register = (on, options) => {
                   </Text>
                   <Text dimColor wrap="truncate-end">
                     {'  '}
-                    {tier} · {TIER_MODEL[tier] ?? ''}
+                    {tier}
                     {pl.after.length ? ` · ${s.after} ${pl.after.join(', ')}` : ''}
                   </Text>
                 </Box>
@@ -1081,12 +1072,12 @@ export const register: Register = (on, options) => {
     const crew = list.length + plannedOf(f, list).length
     const isWorking = list.some(a => a.status === 'running')
     const crewButton = (
-      <Button key="tiers-agents" label={`×${crew}`} plain onPress={() => void togglePane($)} />
+      <Button key="agents-panel-crew" label={`×${crew}`} plain onPress={() => void togglePane($)} />
     )
     const percent = `${Math.round(ratio(f) * 100)}%`
     const dismiss = (
       <Button
-        key="tiers-dismiss"
+        key="agents-panel-dismiss"
         label="✕"
         plain
         role="dismiss"
