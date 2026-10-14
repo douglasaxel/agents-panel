@@ -92,7 +92,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('agent.spawn', () => ({ model: 'claude-sonnet-5-5', agentId: 'a1' }))
     on('clock.now', () => ({ value: 1000 }))
     on('ui.panes', () => ({ value: [] }))
-    on('ui.scroll', () => ({ value: {} }))
+    on('ui.scroll', () => ({}))
     on('ui.open', (_, e) => {
       opened.push({ id: e.id, title: e.title })
       return { value: { isPlaced: true } }
