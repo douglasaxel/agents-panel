@@ -14,7 +14,6 @@ const panel = atom({ plugin: 'tiers', key: 'panel' } as const, {
 const now = atom({ plugin: 'tiers', key: 'now' } as const, 0)
 
 const TOOL = 'mcp__tiers__progress'
-const STEP_TOOL = 'mcp__tiers__step'
 const PANE = 'tiers-agents'
 const TRANSCRIPT = 'tiers-transcript'
 const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
@@ -684,62 +683,14 @@ const linesOf = (messages: readonly SessionMessage[]): Line[] =>
     return out
   })
 
-// How the model picks a tier. Shared text, so it sits ahead of the cache boundary.
-const ROUTING = `# Tiered implementer subagents
-
-When you delegate implementation work (the "implementer subagents" of /implement-spec, or any other delegation), pick one of these as \`subagent_type\`:
-
-| Agent | Model / effort | Use for |
-|---|---|---|
-| tiers:light | Haiku / low | Mechanical edits, renames, config, running builds/tests |
-| tiers:medium | Sonnet / high | A well-specified ticket, a bug with a known cause |
-| tiers:careful | Opus / high | Clear approach, delicate execution: multi-file refactors, invariants |
-| tiers:heavy | Opus / xhigh | Unfamiliar code, unclear root cause, investigation |
-| tiers:fable | Fable / high | Reserve: very complex logic, bugs that survived tiers:heavy |
-
-- Pick the cheapest tier that gets it right first time. Unsure between two: take the higher, except fable, which needs to clearly meet its criteria.
-- Insight and thoroughness together are two tasks: tiers:heavy investigates and writes the brief, tiers:careful implements it.
-- Never pass \`model\` or \`effort\` to the Agent tool for these agents: the tier sets both.
-- A report of \`needs higher tier\`: hand the task to the next tier up, with that report.
-- Parallel tiers:* agents share one working tree unless the flow gives each its own worktree (as /implement-spec does). Run tasks that touch the same files one after another, or pass \`isolation: "worktree"\` and merge the results yourself.
-- Read-only search: use Explore, not a tier.
-- Other agents stay available. Use them for work that is not implementation (research, review, docs, planning), or when no tier fits the task; there you may pass \`model\` and \`effort\` as usual.
-- Pass the ticket title as the Agent \`description\`: the agents panel shows it.
-- With 2 or more delegated tasks, keep \`mcp__tiers__progress\` current: after planning (title, total, tasks [{title, tier, after}], phase "delegate"), on each accepted task (done), and once at the end (finished: true).`
-
-// Appended to /implement-spec's prompt, so its implementer subagents run as tiers.
-const IMPLEMENT_SPEC_NOTE = `
-
-## Implementer subagents (tiers plugin)
-
-Run every implementer subagent as a \`tiers:*\` agent, picked per ticket with the routing table in your system prompt, and pass the ticket title as the Agent \`description\`. Before the first implementer starts, call \`mcp__tiers__progress\` with \`title\` (the spec's name), \`total\`, \`tasks\` (one per ticket in dependency order: title, tier, after = the numbers of its blocking tickets) and \`phase: "delegate"\`. Update \`done\` each time a ticket merges into the integration branch, use \`phase: "review"\` during code-review, and send \`finished: true\` at the end.`
-
-const isImplementSpec = (skill: string): boolean => /(^|:)implement-spec$/.test(skill)
-
 export const register: Register = (on, options) => {
-  on('skill.prompt', async ($, e, next) => {
-    const prompt = await next(e)
-    if (!isImplementSpec(e.skill)) return prompt
-    await openPane($)
-    return { text: prompt.text + IMPLEMENT_SPEC_NOTE }
-  })
-
-  on('prompt.compose', async ($, e, next) => {
-    const composed = await next(e)
-    if (!e.tools.includes('Agent')) return composed
-    const section = { id: 'tiers:routing', text: ROUTING, scope: 'shared' } as const
-    const firstSession = composed.sections.findIndex(s => s.scope === 'session')
-    const at = firstSession === -1 ? composed.sections.length : firstSession
-    return { sections: [...composed.sections.slice(0, at), section, ...composed.sections.slice(at)] }
-  })
-
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     lang = await detectLang($, options.language)
     await $.tool.register({
       name: 'progress',
       description:
-        'Report delegated-implementation progress to the progress bar above the prompt and the agents panel. ' +
+        'Show progress of a multi-step job in the bar above the prompt and the agents panel. ' +
         'Call it after presenting the plan (title, total, tasks, phase "delegate"), each time a task is accepted (done), ' +
         'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value.',
       inputSchema: {
@@ -758,29 +709,13 @@ export const register: Register = (on, options) => {
               type: 'object',
               properties: {
                 title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
-                tier: { type: 'string', enum: ['fable', 'heavy', 'careful', 'medium', 'light'] },
+                tier: { type: 'string', description: 'Optional label drawn beside the task.' },
                 after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
               },
-              required: ['title', 'tier'],
+              required: ['title'],
             },
           },
         },
-      },
-    })
-    await $.tool.register({
-      name: 'step',
-      description:
-        'For tiers:* implementers: report progress on your own task to the agents panel. ' +
-        'Right after reading the brief, call it with `total` (your plan in 3-8 steps) and `done: 0`; ' +
-        'call it again as each step finishes. Cheap and silent: it only draws a bar.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          done: { type: 'integer', minimum: 0, description: 'Steps finished so far.' },
-          total: { type: 'integer', minimum: 1, description: 'Steps planned; may change if the plan changes.' },
-          note: { type: 'string', description: 'The step in progress, a few words.' },
-        },
-        required: ['done'],
       },
     })
     await $.command.register({
@@ -815,38 +750,6 @@ export const register: Register = (on, options) => {
     const next = await update($, flow, p => merge(p, input))
     if (next && input.tasks?.length) await openPane($)
     return { result: `ok: ${label(next ?? blank())}` }
-  })
-
-  // A worker's own progress: the call runs in the worker's loop, so agentId names it.
-  on('tool.call', { tool: STEP_TOOL }, async ($, e) => {
-    const input = e as unknown as { done?: number; total?: number; note?: string }
-    const agentId = e.agentId
-    if (!agentId) return { result: 'ignored: only subagents report steps' }
-    await update($, agents, list =>
-      list.map(a => {
-        if (a.agentId !== agentId) return a
-        const total = Math.max(0, Math.round(input.total ?? a.stepTotal ?? 0))
-        const done = Math.max(0, Math.round(input.done ?? a.stepDone ?? 0))
-        return { ...a, stepTotal: total, stepDone: total ? Math.min(total, done) : done, stepNote: input.note?.trim() || undefined }
-      }),
-    )
-    return { result: 'ok' }
-  })
-
-  // Safety net: worker launches move the faint layer even if the orchestrator forgets to report.
-  on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
-    const type = String(e.subagent_type ?? '')
-    if (!isTier(type)) return next(e)
-
-    await update($, flow, prev => {
-      const base = prev && !prev.isFinished ? { ...blank(), ...prev } : blank()
-      return { ...base, running: base.running + 1, phase: base.phase === 'plan' ? 'delegate' : base.phase }
-    })
-    try {
-      return await next(e)
-    } finally {
-      await update($, flow, prev => (prev ? { ...prev, running: Math.max(0, prev.running - 1) } : prev))
-    }
   })
 
   on('agent.spawn', async ($, e, next) => {

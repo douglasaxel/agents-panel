@@ -1,12 +1,15 @@
 {
   "name": "claude-tiers",
-  "owner": { "name": "douglasaxel", "url": "https://github.com/douglasaxel" },
-  "description": "Tiered implementer subagents for Claude Code, with a live agents panel.",
+  "owner": {
+    "name": "douglasaxel",
+    "url": "https://github.com/douglasaxel"
+  },
+  "description": "A live agents panel for Claude Code.",
   "plugins": [
     {
       "name": "tiers",
       "source": "./",
-      "description": "Tiered implementer subagents for Matt Pocock's skills, with a live agents panel."
+      "description": "A live agents panel with transcripts and a progress bar."
     }
   ]
 }
