@@ -15,7 +15,7 @@ The plugin adds no agents and nothing to the system prompt: Claude delegates exa
 In a Claude Code terminal session:
 
 ```
-/plugin install agents-panel --marketplace douglasaxel/claude-tiers
+/plugin install agents-panel --marketplace douglasaxel/agents-panel
 ```
 
 Answer `y` to add the marketplace, then pick the user scope.
